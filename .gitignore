@@ -1,0 +1,17 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Ignore local heavy binary models (tracked via DVC/dvc.lock instead)
+models/*.pkl
+
+# Environment & IDE settings
+.vscode/
+.idea/
+.DS_Store
+*.log

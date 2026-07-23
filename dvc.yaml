@@ -1,0 +1,49 @@
+stages:
+  preprocess:
+    cmd: python src/data_preprocessing.py
+    deps:
+      - data/raw/ai4i2020.csv
+      - src/data_preprocessing.py
+    outs:
+      - models/type_encoder.pkl
+      - models/feature_selector.pkl
+      - models/scaler.pkl
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - models/type_encoder.pkl
+      - models/feature_selector.pkl
+      - models/scaler.pkl
+    outs:
+      - models/best_model.pkl
+      - models/xgb_model.pkl
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - models/best_model.pkl
+      - src/evaluate.py
+    plots:
+      - reports/cm_logistic_regression.png:
+          cache: true
+      - reports/cm_random_forest.png:
+          cache: true
+      - reports/cm_xgboost.png:
+          cache: true
+      - reports/cm_lightgbm.png:
+          cache: true
+      - reports/cm_catboost.png:
+          cache: true
+
+  explain:
+    cmd: python src/explainability.py
+    deps:
+      - models/best_model.pkl
+      - src/explainability.py
+    plots:
+      - reports/feature_importance.png:
+          cache: true
+      - reports/shap_summary.png:
+          cache: true
