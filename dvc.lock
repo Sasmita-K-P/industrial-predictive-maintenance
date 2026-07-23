@@ -1,0 +1,158 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: python src/data_preprocessing.py
+    deps:
+    - path: data/raw/ai4i2020.csv
+      hash: md5
+      md5: f0adaa9c5e25366c6df1cc2684479871
+      size: 522048
+    - path: src/data_preprocessing.py
+      hash: md5
+      md5: e6fcba573e0113dffb43aea2b22ede7e
+      size: 6071
+    outs:
+    - path: data/processed/X_test.csv
+      hash: md5
+      md5: 789ad30350ef94f1b6583a8e14ea5f23
+      size: 173051
+    - path: data/processed/X_test_scaled.csv
+      hash: md5
+      md5: ec27f85ec2d0d8f7c369acf80a92fcf5
+      size: 318482
+    - path: data/processed/X_train.csv
+      hash: md5
+      md5: 9164b745864982b97e7cf23e9600ff6b
+      size: 1791363
+    - path: data/processed/X_train_scaled.csv
+      hash: md5
+      md5: 95b2b27c89bd39b517f1f06888874cc3
+      size: 2438557
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: ab8cef4cd14c193d7177bbd7703db246
+      size: 6008
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 9bfbc6a6934134364245f838418cbc13
+      size: 46382
+    - path: models/feature_selector.pkl
+      hash: md5
+      md5: ec679fd9c23d9f0c0f05314da2034ec8
+      size: 1127
+    - path: models/scaler.pkl
+      hash: md5
+      md5: 7a6ed65ddfbe0dd589bac78f6f7fe7cd
+      size: 1271
+    - path: models/type_encoder.pkl
+      hash: md5
+      md5: 40eadbea301ea6f4f397e7babc43d457
+      size: 542
+  train:
+    cmd: python src/train.py
+    deps:
+    - path: data/processed/X_train.csv
+      hash: md5
+      md5: 9164b745864982b97e7cf23e9600ff6b
+      size: 1791363
+    - path: data/processed/X_train_scaled.csv
+      hash: md5
+      md5: 95b2b27c89bd39b517f1f06888874cc3
+      size: 2438557
+    - path: data/processed/y_train.csv
+      hash: md5
+      md5: 9bfbc6a6934134364245f838418cbc13
+      size: 46382
+    - path: models/feature_selector.pkl
+      hash: md5
+      md5: ec679fd9c23d9f0c0f05314da2034ec8
+      size: 1127
+    - path: models/scaler.pkl
+      hash: md5
+      md5: 7a6ed65ddfbe0dd589bac78f6f7fe7cd
+      size: 1271
+    - path: models/type_encoder.pkl
+      hash: md5
+      md5: 40eadbea301ea6f4f397e7babc43d457
+      size: 542
+    - path: src/train.py
+      hash: md5
+      md5: 1643634d57e9833dc54fc83d0b9b447d
+      size: 8220
+    outs:
+    - path: models/best_model.pkl
+      hash: md5
+      md5: cfe45e37edb5b1d1f214f3bbebfb6ad9
+      size: 1182276
+    - path: models/xgb_model.pkl
+      hash: md5
+      md5: 2a3c0ec59e1e8f71f6d13fcccdccef37
+      size: 645162
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+    - path: data/processed/X_test.csv
+      hash: md5
+      md5: 789ad30350ef94f1b6583a8e14ea5f23
+      size: 173051
+    - path: data/processed/y_test.csv
+      hash: md5
+      md5: ab8cef4cd14c193d7177bbd7703db246
+      size: 6008
+    - path: models/best_model.pkl
+      hash: md5
+      md5: cfe45e37edb5b1d1f214f3bbebfb6ad9
+      size: 1182276
+    - path: src/evaluate.py
+      hash: md5
+      md5: 17f750619dfb7f88a508aee10fed4205
+      size: 4627
+    outs:
+    - path: reports/cm_best_model.png
+      hash: md5
+      md5: 49bc2db7a75baaf233a9d00306bfad63
+      size: 78699
+    - path: reports/cm_catboost.png
+      hash: md5
+      md5: 71b5970657cd3bf66916302f65937a90
+      size: 79194
+    - path: reports/cm_lightgbm.png
+      hash: md5
+      md5: 33a47d4572580dafc774f3cbb0a81d9f
+      size: 78449
+    - path: reports/cm_logistic_regression.png
+      hash: md5
+      md5: 18811c220b1839e83e1e3632360b7519
+      size: 82485
+    - path: reports/cm_random_forest.png
+      hash: md5
+      md5: d048df3059dae57d7fe9327ef0fd3048
+      size: 80022
+    - path: reports/cm_xgboost.png
+      hash: md5
+      md5: 9ee63cf710859765295763a184618954
+      size: 81936
+  explain:
+    cmd: python src/explainability.py
+    deps:
+    - path: data/processed/X_test.csv
+      hash: md5
+      md5: 789ad30350ef94f1b6583a8e14ea5f23
+      size: 173051
+    - path: models/best_model.pkl
+      hash: md5
+      md5: cfe45e37edb5b1d1f214f3bbebfb6ad9
+      size: 1182276
+    - path: src/explainability.py
+      hash: md5
+      md5: 70ed14cf8e3fb00fee5fbcb4de5746ca
+      size: 4122
+    outs:
+    - path: reports/feature_importance.png
+      hash: md5
+      md5: 08aba561e81a969fda9b646b600d7b64
+      size: 127929
+    - path: reports/shap_summary.png
+      hash: md5
+      md5: 920f248f660b1e51d22cdd8a3029d758
+      size: 392994
