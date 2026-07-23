@@ -5,6 +5,12 @@ stages:
       - data/raw/ai4i2020.csv
       - src/data_preprocessing.py
     outs:
+      - data/processed/X_train.csv
+      - data/processed/X_test.csv
+      - data/processed/y_train.csv
+      - data/processed/y_test.csv
+      - data/processed/X_train_scaled.csv
+      - data/processed/X_test_scaled.csv
       - models/type_encoder.pkl
       - models/feature_selector.pkl
       - models/scaler.pkl
@@ -13,6 +19,9 @@ stages:
     cmd: python src/train.py
     deps:
       - src/train.py
+      - data/processed/X_train.csv
+      - data/processed/y_train.csv
+      - data/processed/X_train_scaled.csv
       - models/type_encoder.pkl
       - models/feature_selector.pkl
       - models/scaler.pkl
@@ -25,7 +34,11 @@ stages:
     deps:
       - models/best_model.pkl
       - src/evaluate.py
+      - data/processed/X_test.csv
+      - data/processed/y_test.csv
     plots:
+      - reports/cm_best_model.png:
+          cache: true
       - reports/cm_logistic_regression.png:
           cache: true
       - reports/cm_random_forest.png:
@@ -42,6 +55,7 @@ stages:
     deps:
       - models/best_model.pkl
       - src/explainability.py
+      - data/processed/X_test.csv
     plots:
       - reports/feature_importance.png:
           cache: true

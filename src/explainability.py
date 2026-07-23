@@ -80,3 +80,17 @@ def explain_model(model, feature_names, X_test=None, reports_dir: str = "reports
             print(f"⚠️ SHAP explanation skipped due to error: {e}")
     else:
         print("[INFO] X_test not provided. Skipping SHAP generation.")
+
+# Add this block at the very end of src/explainability.py
+if __name__ == "__main__":
+    import joblib
+    from data_preprocessing import preprocess_data
+    
+    # Load data and trained model
+    X_train, X_test, y_train, y_test, X_train_scaled, X_test_scaled, scaler, feature_names = preprocess_data(
+        "data/raw/ai4i2020.csv", use_smote=True, k_features=8
+    )
+    best_model = joblib.load("models/best_model.pkl")
+    
+    # Generate explainability plots
+    explain_model(best_model, feature_names, X_test=X_test)
