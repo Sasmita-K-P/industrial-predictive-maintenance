@@ -6,11 +6,22 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 from lightgbm import LGBMClassifier
 from catboost import CatBoostClassifier
-import xgboost as xgb  # <--- Fixes 'NameError: name xgb is not defined'
+import xgboost as xgb  
+import mlflow
+import mlflow.sklearn
+import mlflow.xgboost
+import mlflow.lightgbm
+import mlflow.catboost
+
+# Connect to your local MLflow server
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+
+# Create your project experiment
+mlflow.set_experiment("Predictive_Maintenance_Models")
 
 # Import data preprocessing function
 from data_preprocessing import preprocess_data
@@ -28,6 +39,16 @@ def sanitize_df(df):
         df = df.copy()
         df.columns = clean_cols
     return df
+
+
+def eval_metrics(y_true, y_pred):
+    """Calculates comprehensive classification metrics for predictive maintenance."""
+    return {
+        "accuracy": accuracy_score(y_true, y_pred),
+        "precision": precision_score(y_true, y_pred, zero_division=0),
+        "recall": recall_score(y_true, y_pred, zero_division=0),
+        "f1": f1_score(y_true, y_pred, zero_division=0),
+    }
 
 
 def tune_logistic_regression(X_train, y_train, X_val, y_val, n_trials=10):
@@ -50,7 +71,7 @@ def tune_logistic_regression(X_train, y_train, X_val, y_val, n_trials=10):
         **study.best_params, max_iter=1000, random_state=42
     )
     best_model.fit(X_train, y_train)
-    return best_model, study.best_value
+    return best_model, study.best_value, study.best_params
 
 
 def tune_random_forest(X_train, y_train, X_val, y_val, n_trials=10):
@@ -72,7 +93,7 @@ def tune_random_forest(X_train, y_train, X_val, y_val, n_trials=10):
 
     best_model = RandomForestClassifier(**study.best_params, random_state=42)
     best_model.fit(X_train, y_train)
-    return best_model, study.best_value
+    return best_model, study.best_value, study.best_params
 
 
 def tune_xgboost(X_train, y_train, X_val, y_val, n_trials=10):
@@ -105,7 +126,7 @@ def tune_xgboost(X_train, y_train, X_val, y_val, n_trials=10):
         **study.best_params, random_state=42, eval_metric="logloss"
     )
     best_model.fit(X_train, y_train)
-    return best_model, study.best_value
+    return best_model, study.best_value, study.best_params
 
 
 def tune_lightgbm(X_train, y_train, X_val, y_val, n_trials=10):
@@ -135,7 +156,7 @@ def tune_lightgbm(X_train, y_train, X_val, y_val, n_trials=10):
         **study.best_params, random_state=42, verbose=-1
     )
     best_model.fit(X_train, y_train)
-    return best_model, study.best_value
+    return best_model, study.best_value, study.best_params
 
 
 def tune_catboost(X_train, y_train, X_val, y_val, n_trials=10):
@@ -161,7 +182,7 @@ def tune_catboost(X_train, y_train, X_val, y_val, n_trials=10):
         **study.best_params, random_state=42, verbose=0
     )
     best_model.fit(X_train, y_train)
-    return best_model, study.best_value
+    return best_model, study.best_value, study.best_params
 
 
 def train_models(X_train, y_train, X_train_scaled):
@@ -179,40 +200,89 @@ def train_models(X_train, y_train, X_train_scaled):
 
     print("\n================ STARTING OPTUNA BENCHMARK ================\n")
 
-    print("Tuning Logistic Regression with Optuna...")
-    lr, lr_score = tune_logistic_regression(X_tr_s, y_tr, X_val_s, y_val)
+    # Master Parent Run in MLflow
+    with mlflow.start_run(run_name="Benchmark_Optuna_Comparison") as parent_run:
+        mlflow.log_param("num_train_samples", X_train.shape[0])
+        mlflow.log_param("num_features", X_train.shape[1])
 
-    print("Tuning Random Forest with Optuna...")
-    rf, rf_score = tune_random_forest(X_tr, y_tr, X_val, y_val)
+        # ---------------- 1. Logistic Regression ----------------
+        print("Tuning Logistic Regression with Optuna...")
+        lr, lr_score, lr_params = tune_logistic_regression(X_tr_s, y_tr, X_val_s, y_val)
+        lr_val_preds = lr.predict(X_val_s)
+        lr_metrics = eval_metrics(y_val, lr_val_preds)
+        
+        with mlflow.start_run(run_name="Logistic_Regression", nested=True):
+            mlflow.log_params(lr_params)
+            mlflow.log_metrics(lr_metrics)
+            mlflow.sklearn.log_model(lr, artifact_path="model")
 
-    print("Tuning XGBoost with Optuna...")
-    xgb_m, xgb_score = tune_xgboost(X_tr, y_tr, X_val, y_val)
+        # ---------------- 2. Random Forest ----------------
+        print("Tuning Random Forest with Optuna...")
+        rf, rf_score, rf_params = tune_random_forest(X_tr, y_tr, X_val, y_val)
+        rf_val_preds = rf.predict(X_val)
+        rf_metrics = eval_metrics(y_val, rf_val_preds)
+        
+        with mlflow.start_run(run_name="Random_Forest", nested=True):
+            mlflow.log_params(rf_params)
+            mlflow.log_metrics(rf_metrics)
+            mlflow.sklearn.log_model(rf, artifact_path="model")
 
-    print("Tuning LightGBM with Optuna...")
-    lgbm, lgbm_score = tune_lightgbm(X_tr, y_tr, X_val, y_val)
+        # ---------------- 3. XGBoost ----------------
+        print("Tuning XGBoost with Optuna...")
+        xgb_m, xgb_score, xgb_params = tune_xgboost(X_tr, y_tr, X_val, y_val)
+        xgb_val_preds = xgb_m.predict(sanitize_df(X_val))
+        xgb_metrics = eval_metrics(y_val, xgb_val_preds)
+        
+        with mlflow.start_run(run_name="XGBoost", nested=True):
+            mlflow.log_params(xgb_params)
+            mlflow.log_metrics(xgb_metrics)
+            mlflow.xgboost.log_model(xgb_m, artifact_path="model")
 
-    print("Tuning CatBoost with Optuna...")
-    cat, cat_score = tune_catboost(X_tr, y_tr, X_val, y_val)
+        # ---------------- 4. LightGBM ----------------
+        print("Tuning LightGBM with Optuna...")
+        lgbm, lgbm_score, lgbm_params = tune_lightgbm(X_tr, y_tr, X_val, y_val)
+        lgbm_val_preds = lgbm.predict(sanitize_df(X_val))
+        lgbm_metrics = eval_metrics(y_val, lgbm_val_preds)
+        
+        with mlflow.start_run(run_name="LightGBM", nested=True):
+            mlflow.log_params(lgbm_params)
+            mlflow.log_metrics(lgbm_metrics)
+            mlflow.lightgbm.log_model(lgbm, artifact_path="model")
 
-    scores = {
-        "Logistic Regression": (lr, lr_score),
-        "Random Forest": (rf, rf_score),
-        "XGBoost": (xgb_m, xgb_score),
-        "LightGBM": (lgbm, lgbm_score),
-        "CatBoost": (cat, cat_score),
-    }
+        # ---------------- 5. CatBoost ----------------
+        print("Tuning CatBoost with Optuna...")
+        cat, cat_score, cat_params = tune_catboost(X_tr, y_tr, X_val, y_val)
+        cat_val_preds = cat.predict(X_val)
+        cat_metrics = eval_metrics(y_val, cat_val_preds)
+        
+        with mlflow.start_run(run_name="CatBoost", nested=True):
+            mlflow.log_params(cat_params)
+            mlflow.log_metrics(cat_metrics)
+            mlflow.catboost.log_model(cat, artifact_path="model")
 
-    print("\n--- OPTUNA BENCHMARK RESULTS (Validation F1 Score) ---")
-    for name, (_, score) in scores.items():
-        print(f"  * {name}: {score:.4f}")
+        scores = {
+            "Logistic Regression": (lr, lr_score),
+            "Random Forest": (rf, rf_score),
+            "XGBoost": (xgb_m, xgb_score),
+            "LightGBM": (lgbm, lgbm_score),
+            "CatBoost": (cat, cat_score),
+        }
 
-    # Pick the champion model with the highest validation F1
-    best_model_name, (best_model, best_f1) = max(
-        scores.items(), key=lambda item: item[1][1]
-    )
-    print(
-        f"\n🏆 Best Model Selected: {best_model_name} (Val F1: {best_f1:.4f})"
-    )
+        print("\n--- OPTUNA BENCHMARK RESULTS (Validation F1 Score) ---")
+        for name, (_, score) in scores.items():
+            print(f"  * {name}: {score:.4f}")
+
+        # Pick the champion model with the highest validation F1
+        best_model_name, (best_model, best_f1) = max(
+            scores.items(), key=lambda item: item[1][1]
+        )
+        print(
+            f"\n🏆 Best Model Selected: {best_model_name} (Val F1: {best_f1:.4f})"
+        )
+
+        # Log champion model info to the parent MLflow run
+        mlflow.log_param("champion_model_name", best_model_name)
+        mlflow.log_metric("champion_val_f1", best_f1)
 
     return lr, rf, xgb_m, lgbm, cat, best_model, best_model_name
 

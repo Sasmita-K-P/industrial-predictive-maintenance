@@ -62,6 +62,7 @@ def evaluate_model(model, X_test, y_test, name="Model"):
         y_proba = y_pred
 
     metrics = {
+        "Model": name,
         "accuracy": float(accuracy_score(y_test, y_pred)),
         "precision": float(precision_score(y_test, y_pred, zero_division=0)),
         "recall": float(recall_score(y_test, y_pred, zero_division=0)),
@@ -73,7 +74,8 @@ def evaluate_model(model, X_test, y_test, name="Model"):
     print(f" Performance Metrics: {name}")
     print(f"==================================================")
     for k, v in metrics.items():
-        print(f"{k.capitalize():<10} : {v:.4f}")
+        if k != "Model":
+            print(f"{k.capitalize():<10} : {v:.4f}")
 
     print("\nDetailed Classification Report:")
     print(classification_report(y_test, y_pred, digits=4))
