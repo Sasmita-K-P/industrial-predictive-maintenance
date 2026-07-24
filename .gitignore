@@ -15,3 +15,9 @@ models/*.pkl
 .idea/
 .DS_Store
 *.log
+catboost_info/
+mlartifacts/
+mlflow.db
+models/*.pkl
+reports/*.png
+reports/metrics.json
